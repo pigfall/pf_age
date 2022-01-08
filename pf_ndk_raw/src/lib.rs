@@ -1,1 +1,1 @@
-pub use ndk_sys::*;
+pub use ndk_sys::{ANativeActivity,ANativeWindow};

@@ -2,4 +2,6 @@
 members= [
 "pf_age_entry",
 "pf_age_examples"
+"pf_age_entry_macro",
+"pf_age_event",
 ]

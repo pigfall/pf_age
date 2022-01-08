@@ -16,6 +16,11 @@ pub fn game_main_wrapper(attr: proc_macro::TokenStream,input: proc_macro::TokenS
             pf_age_entry::init_android_logger("pf_age_logger");
             info!(" ANativeActivity_onCreating");
             // }
+            pf_age_entry::onCreateANativeActivity(
+                activity_raw_ptr as *mut _,
+                saved_state,
+                safed_stae_size,
+                );
 
         }
     };
