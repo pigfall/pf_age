@@ -22,6 +22,8 @@ pub fn init_android_logger(tag: &str){
         );
 }
 
+static mut callback_counter:i32 = 0;
+
 pub unsafe fn onCreateANativeActivity(
     activity_raw_pointer: *mut ANativeActivity,
     saved_state: *mut c_void,
@@ -34,8 +36,9 @@ pub unsafe fn onCreateANativeActivity(
     callbacks.onNativeWindowCreated  = Some(on_native_window_created);
     callbacks.onNativeWindowDestroyed = Some(on_native_window_destroyed);
     callbacks.onWindowFocusChanged =Some(on_native_window_focus_changed);
-    info!("✅  callbask register success");
+    info!("✅  callback register success");
     // }
+    
     let mut state = activity_state::ActivityState::default();
     state.native_activity = activity_raw_pointer;
     activity_state::activity_state = Some(state);
@@ -56,19 +59,19 @@ pub unsafe fn onCreateANativeActivity(
 
 
 unsafe extern "C" fn on_start (activity_raw_ptr: *mut ANativeActivity){
-    info!("on_start function called");
+    info!("{:?} on_start function called",callback_counter+=1);
 }
 
 unsafe extern "C" fn on_native_window_created(native_activity_raw_ptr: *mut ANativeActivity,native_window_raw_ptr: *mut ANativeWindow){
-    info!("on_native_window_created function called");
+    info!("{:?} on_native_window_created function called",callback_counter+=1);
     let mut state = activity_state::get_act_state();
     state.update_native_window(native_window_raw_ptr);
 }
 
 unsafe extern "C" fn on_native_window_destroyed(native_activity_raw_ptr: *mut ANativeActivity,native_window_raw_ptr: *mut ANativeWindow){
-    info!("on_native_window_destroyed function called");
+    info!("{:?} on_native_window_destroyed function called",callback_counter+=1);
 }
 
 unsafe extern "C" fn on_native_window_focus_changed(native_activity_raw_ptr: *mut ANativeActivity,has_focused: c_int){
-    info!("on_native_window_focus_changed function called");
+    info!("{:?} on_native_window_focus_changed function called",callback_counter+1);
 }
