@@ -44,12 +44,14 @@ pub unsafe fn onCreateANativeActivity(
     
     let mut state = activity_state::ActivityState::default();
     state.native_activity = activity_raw_pointer;
+    let mut game_ev_reader_id = state.game_event_channel.register_reader();
     activity_state::activity_state = Some(state);
 
-    thread::spawn(||{
+
+    thread::spawn(move||{
         loop{
             pre_handle_evs();
-            //game_app_update()
+            game_app_update(&mut game_ev_reader_id);
         }
     });
 
@@ -83,6 +85,8 @@ unsafe extern "C" fn on_native_window_created(native_activity_raw_ptr: *mut ANat
 unsafe extern "C" fn on_native_window_destroyed(native_activity_raw_ptr: *mut ANativeActivity,native_window_raw_ptr: *mut ANativeWindow){
     callback_counter+=1;
     info!("{:?} on_native_window_destroyed function called",callback_counter);
+    let mut state = activity_state::get_act_state();
+    state.destroy_window();
 }
 
 unsafe extern "C" fn on_native_window_focus_changed(native_activity_raw_ptr: *mut ANativeActivity,has_focused: c_int){
@@ -137,5 +141,15 @@ fn pre_handle_evs(){
 }
 
 fn write_to_event_channel(ev:Event){
+    let activity_state = activity_state::get_act_state();
+    activity_state.game_event_channel.single_write(ev);
 
 }
+
+fn game_app_update(game_ev_reader: &mut shrev::ReaderId<Event>){
+    let activity_state = activity_state::get_act_state();
+    for ev in activity_state.game_event_channel.read(game_ev_reader){
+        info!("⌛ read from game ev channel {:?}",ev);
+    }
+}
+

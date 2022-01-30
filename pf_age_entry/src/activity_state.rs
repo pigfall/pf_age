@@ -5,6 +5,7 @@ use std::sync::{Condvar,Mutex};
 use std::collections::VecDeque;
 use pf_age_event::{Event,SystemEvent};
 use log::info;
+use shrev::{EventChannel};
 
 pub struct ActivityState{
     pub native_activity: *mut ANativeActivity, 
@@ -13,8 +14,8 @@ pub struct ActivityState{
     pub updated: bool,
     pub cond_var:Condvar,
     pub mutex: Mutex<bool>,
-    pub events: VecDeque<Event>,
     pub activity_evs:VecDeque<Event>,
+    pub game_event_channel: EventChannel<Event>,
 }
 
 
@@ -23,18 +24,27 @@ impl ActivityState {
     forward_event(&mut self,event :Event)
     update_native_window(&mut self,window: *mut ANativeWindow)
     update_input_queue(&mut self,input_queue: *mut AInputQueue)
-    poll_event(&mut self)->Option<Event>
      
     */
     pub fn forward_event(&mut self,event :Event){
     }
-    pub fn update_native_window(&mut self,window: *mut ANativeWindow){
-        self.native_window = window;
-        // { wait_window_replaced;
+
+    pub fn destroy_window(&mut self){
          let mut guard = self.mutex.lock().map_err(|e|{info!("{:?}",e);e}).unwrap();
         self.updated =false;
-        self.events.push_back(Event::SystemEvent(SystemEvent{}));
-        self.activity_evs.push_back(Event::SystemEvent(SystemEvent{}));
+        self.activity_evs.push_back(Event::SystemEvent(SystemEvent::AndroidNativeWindowDestoryed));
+        while !self.updated {
+             guard  = self.cond_var.wait(guard).unwrap();
+        }
+        // NOTE ensure the window change to null after the game app has pre handle the event
+        self.native_window = ptr::null_mut();
+    }
+    pub fn update_native_window(&mut self,window: *mut ANativeWindow){
+        // { wait_window_replaced;
+         let mut guard = self.mutex.lock().map_err(|e|{info!("{:?}",e);e}).unwrap();
+        self.native_window = window;
+        self.updated =false;
+        self.activity_evs.push_back(Event::SystemEvent(SystemEvent::AndroidNativeWindowCreated));
         while !self.updated {
              guard  = self.cond_var.wait(guard).unwrap();
         }
@@ -43,10 +53,6 @@ impl ActivityState {
 
     pub fn update_input_queue(&mut self,input_queue: *mut AInputQueue){
         //todo!("");
-    }
-    pub fn poll_event(&mut self)->Option<Event>{
-         self.mutex.lock().map_err(|e|{info!("{:?}",e);e}).unwrap();
-         self.events.pop_front()
     }
 }
 
@@ -60,8 +66,8 @@ impl Default for ActivityState{
             updated:false,
             cond_var:Condvar::new(),
             mutex: Mutex::new(false),
-            events:VecDeque::with_capacity(200),
             activity_evs:VecDeque::with_capacity(200),
+            game_event_channel: EventChannel::new(),
         }
     }
 }

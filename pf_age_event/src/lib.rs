@@ -10,6 +10,7 @@ pub struct InputEvent{
 }
 
 #[derive(Debug)]
-pub struct SystemEvent{
-
+pub enum SystemEvent{
+    AndroidNativeWindowCreated,
+    AndroidNativeWindowDestoryed,
 }
