@@ -10,6 +10,8 @@ pub use pf_age_entry_macro::*;
 pub use android_logger;
 pub use log;
 
+mod gl;
+
 mod activity_state;
 use activity_state::ActivityState;
 
@@ -186,4 +188,43 @@ fn init_egl(){
     info!("⌛ Getting default display");
     let display = egl_ins.get_display(egl::DEFAULT_DISPLAY).ok_or_else(||{let msg="❌ noget default display";info!("{:?}",msg);msg}).unwrap();
     info!("✅ Getted default display");
+
+
+    info!("⌛  Initing display");
+    egl_ins.initialize(display).map_err(|e|{
+        info!("❌ Failed to init display {:?}",e);
+        e
+    }).unwrap();
+    info!("✅ Inited display");
+
+
+    info!("⌛ Choose config which matched the attributes we wanted");
+    let attributes:Vec<egl::Int> = [egl::RED_SIZE, 8, egl::GREEN_SIZE, 8, egl::BLUE_SIZE, 8, egl::NONE].to_vec();
+    let config :egl::Config = egl_ins.choose_first_config(display,&attributes).
+        map_err(|e|{
+            info!("❌ Failed to choose first config {:?}",e);
+            e
+        }).unwrap().
+    ok_or_else(||{let msg = "❌ No matched config ";info!("{:?}",msg);msg}).unwrap();
+    info!("✅ Config choosed");
+    // >>
+
+    // << create_context
+    info!("⌛ Creating context");
+    let ctx = egl_ins.create_context(display,config,None,None).map_err(
+        |e|{
+            info!("❌ Failed to create context {:?}",e);
+            e
+        }
+        ).unwrap();
+    info!("✅ Created context");
+
+    let gl_ins = gl::GLIns{
+        display:display,
+        ctx:ctx,
+        config:config,
+        egl_ins:egl_ins,
+    };
+
+    activity_state::get_act_state().gl = Some(gl_ins);
 }

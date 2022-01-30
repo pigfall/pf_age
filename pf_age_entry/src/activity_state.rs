@@ -7,6 +7,8 @@ use pf_age_event::{Event,SystemEvent};
 use log::info;
 use shrev::{EventChannel};
 
+use crate::gl;
+
 pub struct ActivityState{
     pub native_activity: *mut ANativeActivity, 
     pub native_window: *mut ANativeWindow,
@@ -17,6 +19,7 @@ pub struct ActivityState{
     pub activity_evs:VecDeque<Event>,
     pub game_event_channel: EventChannel<Event>,
     pub gl_fc_loaded: bool,
+    pub gl: Option<gl::GLIns>,
 }
 
 
@@ -70,6 +73,7 @@ impl Default for ActivityState{
             activity_evs:VecDeque::with_capacity(200),
             game_event_channel: EventChannel::new(),
             gl_fc_loaded:false,
+            gl:None,
         }
     }
 }
