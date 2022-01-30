@@ -4,4 +4,5 @@ pub struct GLIns {
     pub config: egl::Config,
     pub ctx:  egl::Context,
     pub surface: Option<egl::Surface>,
+    pub gl_fcs: Option<glow::Context>,
 }

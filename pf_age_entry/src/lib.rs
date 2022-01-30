@@ -1,5 +1,6 @@
 use pf_ndk_raw::{ANativeActivity, ANativeWindow,AInputQueue};
 use std::ffi::{CStr, CString};
+use glow::HasContext;
 use std::os::raw::{c_void,c_int};
 use std::io::{BufRead, BufReader};
 use log::{info,error};
@@ -189,6 +190,17 @@ fn game_app_update(game_ev_reader: &mut shrev::ReaderId<Event>){
     for ev in activity_state.game_event_channel.read(game_ev_reader){
         info!("✅     read from game ev channel {:?}",ev);
     }
+    let gl_wrapper = activity_state.gl.as_ref().unwrap();
+    if let Some(gl_fcs) = gl_wrapper.gl_fcs.as_ref(){
+        if let Some(surface) = gl_wrapper.surface{
+                    unsafe{
+                        gl_fcs.clear_color(0.1,0.2,0.3,1.0);
+                        gl_fcs.clear(glow::COLOR_BUFFER_BIT);
+                        gl_wrapper.egl_ins.swap_buffers(gl_wrapper.display,surface);
+                    };
+        };
+    };
+
 }
 
 
@@ -233,7 +245,7 @@ fn pre_handle_native_activity_ev(ev :&Event){
                     info!("✅ Attached an EGL rendering context to EGL surfaces");
                     if !act_state.gl_fc_loaded{
                         info!("⌛  Loading gl functions");
-                        let gl = unsafe {
+                        let gl_fcs = unsafe {
                             glow::Context::from_loader_function_with_version_parse(
                                 |version_str|{
                                     // TODO
@@ -262,9 +274,9 @@ fn pre_handle_native_activity_ev(ev :&Event){
                                         info!("❌ {:?}",e);
                                         e
                                     }
-                                    ).unwrap();
+                                    ).unwrap()
                         };
-
+                        gl_wrapper.gl_fcs = Some(gl_fcs);
 
                         act_state.gl_fc_loaded = true;
 
@@ -339,6 +351,7 @@ fn init_egl(){
         config:config,
         egl_ins:egl_ins,
         surface:None,
+        gl_fcs:None,
     };
 
     activity_state::get_act_state().gl = Some(gl_ins);
