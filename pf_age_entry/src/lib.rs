@@ -199,7 +199,7 @@ fn pre_handle_native_activity_ev(ev :&Event){
                 SystemEvent::AndroidNativeWindowCreated=>{
                     let act_state = activity_state::get_act_state();
                     let window_ptr = act_state.native_window;
-                    let gl_wrapper = &act_state.gl.as_ref().unwrap();
+                    let mut gl_wrapper = &mut act_state.gl.as_mut().unwrap();
                     // { create render context
                     // }
 
@@ -218,6 +218,7 @@ fn pre_handle_native_activity_ev(ev :&Event){
                                 ).unwrap()
                     }; 
                     info!("✅  Created window surface");
+                    gl_wrapper.surface=Some(surface);
                     // >>
 
                     // <<  Attach an EGL rendering context to EGL surfaces.
@@ -271,6 +272,18 @@ fn pre_handle_native_activity_ev(ev :&Event){
                     // }
 
                 },
+                SystemEvent::AndroidNativeWindowDestoryed=>{
+                    let act_state = activity_state::get_act_state();
+                    let gl_wrapper = &act_state.gl.as_ref().unwrap();
+                    match gl_wrapper.surface{
+                        Some(surface)=>{
+                            info!("⌛ destroying surface");
+                            gl_wrapper.egl_ins.destroy_surface(gl_wrapper.display,surface);
+                            info!("✅  destroyed surface");
+                        },
+                        _=>{},
+                    }
+                }
                 _=>{},
             }
         }
@@ -325,6 +338,7 @@ fn init_egl(){
         ctx:ctx,
         config:config,
         egl_ins:egl_ins,
+        surface:None,
     };
 
     activity_state::get_act_state().gl = Some(gl_ins);
