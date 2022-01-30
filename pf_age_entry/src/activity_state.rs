@@ -1,4 +1,4 @@
-use pf_ndk_raw::{ANativeActivity, ANativeWindow};
+use pf_ndk_raw::{ANativeActivity, ANativeWindow,AInputQueue};
 use std::ptr;
 use lazy_static::lazy_static;
 use std::sync::{Condvar,Mutex};
@@ -9,6 +9,7 @@ use log::info;
 pub struct ActivityState{
     pub native_activity: *mut ANativeActivity, 
     pub native_window: *mut ANativeWindow,
+    pub input_queue: *mut AInputQueue,
     pub updated: bool,
     pub cond_var:Condvar,
     pub mutex: Mutex<bool>,
@@ -17,6 +18,13 @@ pub struct ActivityState{
 
 
 impl ActivityState {
+    /*
+    forward_event(&mut self,event :Event)
+    update_native_window(&mut self,window: *mut ANativeWindow)
+    update_input_queue(&mut self,input_queue: *mut AInputQueue)
+    poll_event(&mut self)->Option<Event>
+     
+    */
     pub fn forward_event(&mut self,event :Event){
     }
     pub fn update_native_window(&mut self,window: *mut ANativeWindow){
@@ -30,6 +38,10 @@ impl ActivityState {
         }
         // } 
     }
+
+    pub fn update_input_queue(&mut self,input_queue: *mut AInputQueue){
+        todo!("");
+    }
     pub fn poll_event(&mut self)->Option<Event>{
          self.mutex.lock().map_err(|e|{info!("{:?}",e);e}).unwrap();
          self.events.pop_front()
@@ -42,6 +54,7 @@ impl Default for ActivityState{
         Self{
             native_activity:  ptr::null_mut(),
             native_window:  ptr::null_mut(),
+            input_queue:  ptr::null_mut(),
             updated:false,
             cond_var:Condvar::new(),
             mutex: Mutex::new(false),

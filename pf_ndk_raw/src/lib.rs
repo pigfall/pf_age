@@ -1,1 +1,1 @@
-pub use ndk_sys::{ANativeActivity,ANativeWindow};
+pub use ndk_sys::{ANativeActivity,ANativeWindow,AInputQueue};

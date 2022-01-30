@@ -1,4 +1,4 @@
-use pf_ndk_raw::{ANativeActivity, ANativeWindow};
+use pf_ndk_raw::{ANativeActivity, ANativeWindow,AInputQueue};
 use std::os::raw::{c_void,c_int};
 use log::info;
 use std::ptr::NonNull;
@@ -36,6 +36,8 @@ pub unsafe fn onCreateANativeActivity(
     callbacks.onNativeWindowCreated  = Some(on_native_window_created);
     callbacks.onNativeWindowDestroyed = Some(on_native_window_destroyed);
     callbacks.onWindowFocusChanged =Some(on_native_window_focus_changed);
+    callbacks.onInputQueueCreated = Some(on_input_queue_created);
+    //callbacks.onInputQueueDestroyed = Some(on_input_queue_destroyed);
     info!("✅  callback register success");
     // }
     
@@ -59,19 +61,33 @@ pub unsafe fn onCreateANativeActivity(
 
 
 unsafe extern "C" fn on_start (activity_raw_ptr: *mut ANativeActivity){
-    info!("{:?} on_start function called",callback_counter+=1);
+    callback_counter+=1;
+    info!("{:?} on_start function called",callback_counter);
 }
 
 unsafe extern "C" fn on_native_window_created(native_activity_raw_ptr: *mut ANativeActivity,native_window_raw_ptr: *mut ANativeWindow){
-    info!("{:?} on_native_window_created function called",callback_counter+=1);
+    callback_counter+=1;
+    info!("{:?} on_native_window_created function called",callback_counter);
     let mut state = activity_state::get_act_state();
     state.update_native_window(native_window_raw_ptr);
 }
 
 unsafe extern "C" fn on_native_window_destroyed(native_activity_raw_ptr: *mut ANativeActivity,native_window_raw_ptr: *mut ANativeWindow){
-    info!("{:?} on_native_window_destroyed function called",callback_counter+=1);
+    callback_counter+=1;
+    info!("{:?} on_native_window_destroyed function called",callback_counter);
 }
 
 unsafe extern "C" fn on_native_window_focus_changed(native_activity_raw_ptr: *mut ANativeActivity,has_focused: c_int){
-    info!("{:?} on_native_window_focus_changed function called",callback_counter+1);
+    callback_counter+=1;
+    info!("{:?} on_native_window_focus_changed function called",callback_counter);
+}
+
+unsafe extern "C" fn on_input_queue_created(
+    activity: *mut ANativeActivity,
+    queue: *mut AInputQueue,
+) {
+    callback_counter+=1;
+    info!("{:?} on_input_queue_created",callback_counter);
+    let mut state = activity_state::get_act_state();
+    state.update_input_queue(queue);
 }
