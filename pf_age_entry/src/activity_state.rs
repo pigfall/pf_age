@@ -14,6 +14,7 @@ pub struct ActivityState{
     pub cond_var:Condvar,
     pub mutex: Mutex<bool>,
     pub events: VecDeque<Event>,
+    pub activity_evs:VecDeque<Event>,
 }
 
 
@@ -31,8 +32,9 @@ impl ActivityState {
         self.native_window = window;
         // { wait_window_replaced;
          let mut guard = self.mutex.lock().map_err(|e|{info!("{:?}",e);e}).unwrap();
+        self.updated =false;
         self.events.push_back(Event::SystemEvent(SystemEvent{}));
-        // self.forward_event(Event::SystemEvent(SystemEvent{}));
+        self.activity_evs.push_back(Event::SystemEvent(SystemEvent{}));
         while !self.updated {
              guard  = self.cond_var.wait(guard).unwrap();
         }
@@ -40,7 +42,7 @@ impl ActivityState {
     }
 
     pub fn update_input_queue(&mut self,input_queue: *mut AInputQueue){
-        todo!("");
+        //todo!("");
     }
     pub fn poll_event(&mut self)->Option<Event>{
          self.mutex.lock().map_err(|e|{info!("{:?}",e);e}).unwrap();
@@ -59,6 +61,7 @@ impl Default for ActivityState{
             cond_var:Condvar::new(),
             mutex: Mutex::new(false),
             events:VecDeque::with_capacity(200),
+            activity_evs:VecDeque::with_capacity(200),
         }
     }
 }

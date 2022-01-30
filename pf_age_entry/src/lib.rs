@@ -2,6 +2,7 @@ use pf_ndk_raw::{ANativeActivity, ANativeWindow,AInputQueue};
 use std::os::raw::{c_void,c_int};
 use log::info;
 use std::ptr::NonNull;
+use pf_age_event::{Event,SystemEvent};
 use std::thread;
 
 pub use pf_age_entry_macro::*;
@@ -46,17 +47,24 @@ pub unsafe fn onCreateANativeActivity(
     activity_state::activity_state = Some(state);
 
     thread::spawn(||{
-        let mut state = unsafe {
-            activity_state::get_act_state()
-        };
-        while true {
-            if let Some(ev) = state.poll_event(){
-                state.updated=true;
-                state.cond_var.notify_all();
-                info!("event : {:?}",ev);
-            };
-        };
+        loop{
+            pre_handle_evs();
+            //game_app_update()
+        }
     });
+
+    //thread::spawn(||{
+    //    let mut state = unsafe {
+    //        activity_state::get_act_state()
+    //    };
+    //    while true {
+    //        if let Some(ev) = state.poll_event(){
+    //            state.updated=true;
+    //            state.cond_var.notify_all();
+    //            info!("event : {:?}",ev);
+    //        };
+    //    };
+    //});
 }
 
 
@@ -90,4 +98,44 @@ unsafe extern "C" fn on_input_queue_created(
     info!("{:?} on_input_queue_created",callback_counter);
     let mut state = activity_state::get_act_state();
     state.update_input_queue(queue);
+}
+
+fn pre_handle_evs(){
+    // { summary
+    //   1. poll all activity events , and pre handle it then write to Game EventChannel
+    //   2. poll all input events then write to GameEventChannel
+    // }
+
+    //info!("pre_handle_evs");
+    
+    let activity_state = activity_state::get_act_state();
+
+    // lock
+    activity_state.mutex.lock();
+
+    // { 1. poll poll_nativie_activity_event();
+    loop{
+        match activity_state.activity_evs.pop_front(){
+            None=>break,
+            Some(ev)=>{
+                // {{ TODO pre handle  :eg udpate window
+                info!("handle activity ev {:?}",ev);
+                activity_state.updated = true;
+
+                activity_state.cond_var.notify_all();
+                // }}
+                write_to_event_channel(ev);
+            },
+        }
+    }
+    // }
+    
+    // { 2. poll input events then write to GameEventChannel
+    //let input_evs = poll_input_evs();
+    //write_to_event_channel(native_activity_evs,input_evs);
+    // }
+}
+
+fn write_to_event_channel(ev:Event){
+
 }
