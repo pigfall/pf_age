@@ -13,6 +13,8 @@ pub use log;
 mod activity_state;
 use activity_state::ActivityState;
 
+mod render;
+
 
 
 pub fn init_android_logger(tag: &str){
@@ -45,7 +47,12 @@ pub unsafe fn onCreateANativeActivity(
     let mut state = activity_state::ActivityState::default();
     state.native_activity = activity_raw_pointer;
     let mut game_ev_reader_id = state.game_event_channel.register_reader();
+
     activity_state::activity_state = Some(state);
+
+
+    init_egl();
+    info!("✅  egl inited");
 
 
     thread::spawn(move||{
@@ -122,6 +129,7 @@ fn pre_handle_evs(){
         match activity_state.activity_evs.pop_front(){
             None=>break,
             Some(ev)=>{
+                pre_handle_native_activity_ev(&ev);
                 // {{ TODO pre handle  :eg udpate window
                 info!("handle activity ev {:?}",ev);
                 activity_state.updated = true;
@@ -143,13 +151,39 @@ fn pre_handle_evs(){
 fn write_to_event_channel(ev:Event){
     let activity_state = activity_state::get_act_state();
     activity_state.game_event_channel.single_write(ev);
-
 }
 
 fn game_app_update(game_ev_reader: &mut shrev::ReaderId<Event>){
     let activity_state = activity_state::get_act_state();
     for ev in activity_state.game_event_channel.read(game_ev_reader){
-        info!("⌛ read from game ev channel {:?}",ev);
+        info!("✅     read from game ev channel {:?}",ev);
     }
 }
 
+
+fn pre_handle_native_activity_ev(ev :&Event){
+    //use glutin::ContextBuilder;
+    //if isWindowCreatedEvent(ev){
+    //    let act_state = activity_state::get_act_state();
+    //    let window_ptr = act_state.native_window;
+    //    // { create render context
+    //    // }
+    //    
+    //    // { loaded  gl function if not loaded
+    //    //
+    //    if !act_state.gl_fc_loaded{
+    //    }
+    //    // }
+    //}
+}
+
+
+fn init_egl(){
+    info!("⌛ Loading egl functions");
+    let  egl_ins = unsafe {
+        egl::DynamicInstance::<egl::EGL1_4>::load_required().map_err(|e|{info!("✅ Failed to load egl functions {:?}",e);e}).unwrap()
+    };
+    info!("⌛ Getting default display");
+    let display = egl_ins.get_display(egl::DEFAULT_DISPLAY).ok_or_else(||{let msg="❌ noget default display";info!("{:?}",msg);msg}).unwrap();
+    info!("✅ Getted default display");
+}

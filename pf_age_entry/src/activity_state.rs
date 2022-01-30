@@ -16,6 +16,7 @@ pub struct ActivityState{
     pub mutex: Mutex<bool>,
     pub activity_evs:VecDeque<Event>,
     pub game_event_channel: EventChannel<Event>,
+    pub gl_fc_loaded: bool,
 }
 
 
@@ -68,6 +69,7 @@ impl Default for ActivityState{
             mutex: Mutex::new(false),
             activity_evs:VecDeque::with_capacity(200),
             game_event_channel: EventChannel::new(),
+            gl_fc_loaded:false,
         }
     }
 }
