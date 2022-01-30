@@ -1,6 +1,11 @@
 use pf_ndk_raw::{ANativeActivity, ANativeWindow,AInputQueue};
+use std::ffi::{CStr, CString};
 use std::os::raw::{c_void,c_int};
-use log::info;
+use std::io::{BufRead, BufReader};
+use log::{info,error};
+use std::fs::File;
+use std::os::unix::io::FromRawFd;
+use std::os::unix::prelude::RawFd;
 use std::ptr::NonNull;
 use pf_age_event::{Event,SystemEvent};
 use std::thread;
@@ -34,6 +39,30 @@ pub unsafe fn onCreateANativeActivity(
     saved_state: *mut c_void,
     saved_state_size: usize,
     ){
+
+    let mut logpipe: [RawFd; 2] = Default::default();
+    libc::pipe(logpipe.as_mut_ptr());
+    libc::dup2(logpipe[1], libc::STDOUT_FILENO);
+    libc::dup2(logpipe[1], libc::STDERR_FILENO);
+    thread::spawn(move || {
+        // let tag = CStr::from_bytes_with_nul(b"pf_age_logger\0").unwrap();
+
+        let file = File::from_raw_fd(logpipe[0]);
+        let mut reader = BufReader::new(file);
+        let mut buffer = String::new();
+        loop {
+            buffer.clear();
+            if let Ok(len) = reader.read_line(&mut buffer) {
+                if len == 0 {
+                    break;
+                } else if let Ok(msg) = CString::new(buffer.clone()) {
+                    error!("{:?}",msg);
+                    // android_logger(Level::Info, tag, &msg);
+                }
+            }
+        }
+    });
+
     // { fill callbacks
     let mut activity_nonnull_ptr = NonNull::new(activity_raw_pointer).ok_or_else(||{let msg ="unexpted activity is nil"; info!("{:?}",msg);msg}).unwrap();
     let mut callbacks = activity_nonnull_ptr.as_mut().callbacks.as_mut().ok_or_else(||{let msg = "Unexpted: activity's callback is nil";info!("{:?}",msg);msg}).unwrap();
@@ -164,19 +193,89 @@ fn game_app_update(game_ev_reader: &mut shrev::ReaderId<Event>){
 
 
 fn pre_handle_native_activity_ev(ev :&Event){
-    //use glutin::ContextBuilder;
-    //if isWindowCreatedEvent(ev){
-    //    let act_state = activity_state::get_act_state();
-    //    let window_ptr = act_state.native_window;
-    //    // { create render context
-    //    // }
-    //    
-    //    // { loaded  gl function if not loaded
-    //    //
-    //    if !act_state.gl_fc_loaded{
-    //    }
-    //    // }
-    //}
+    match ev {
+        Event::SystemEvent(systemEvent)=>{
+            match systemEvent{
+                SystemEvent::AndroidNativeWindowCreated=>{
+                    let act_state = activity_state::get_act_state();
+                    let window_ptr = act_state.native_window;
+                    let gl_wrapper = &act_state.gl.as_ref().unwrap();
+                    // { create render context
+                    // }
+
+                    // { loaded  gl function if not loaded
+                    //
+                    //
+
+                    info!("⌛ Creating window surface");
+                    let surface = unsafe {
+                        gl_wrapper.egl_ins.create_window_surface(gl_wrapper.display,gl_wrapper.config,window_ptr as egl::NativeWindowType,None).
+                            map_err(
+                                |e|{
+                                    info!("❌ Failed to create window surface {:?}",e);
+                                    e
+                                }
+                                ).unwrap()
+                    }; 
+                    info!("✅  Created window surface");
+                    // >>
+
+                    // <<  Attach an EGL rendering context to EGL surfaces.
+                    info!("⌛ Attach an EGL rendering context to EGL surfaces");
+                    gl_wrapper.egl_ins.make_current(gl_wrapper.display,Some(surface),Some(surface),Some(gl_wrapper.ctx)).
+                        map_err(
+                            |e|{
+                                info!("❌ Failed to attach egl rendering context to egl surfaces");
+                                e
+                            }
+                            ).unwrap();
+                    info!("✅ Attached an EGL rendering context to EGL surfaces");
+                    if !act_state.gl_fc_loaded{
+                        info!("⌛  Loading gl functions");
+                        let gl = unsafe {
+                            glow::Context::from_loader_function_with_version_parse(
+                                |version_str|{
+                                    // TODO
+                                    info!("gl version {:?}",version_str);
+                                    Ok(
+                                        glow::Version {
+                                            major: 1,
+                                            minor: 0,
+                                            is_embedded: true,
+                                            revision: None,
+                                            vendor_info: "tzz".to_string(),
+                                        }
+
+                                      )
+                                }
+                                ,
+                                |name|{
+                                    info!("⌛ Loading {:?}",name);
+                                    gl_wrapper.egl_ins.get_proc_address(name).
+                                        map_or(std::ptr::null(),|ptr|{
+                                            info!("✅  Loaded {:?} {:?}",name,ptr);
+                                            ptr as *const _
+                                        })
+                                }).map_err(
+                                    |e|{
+                                        info!("❌ {:?}",e);
+                                        e
+                                    }
+                                    ).unwrap();
+                        };
+
+
+                        act_state.gl_fc_loaded = true;
+
+                    }
+                    // }
+
+                },
+                _=>{},
+            }
+        }
+        _ =>{},
+    }
 }
 
 
@@ -218,6 +317,8 @@ fn init_egl(){
         }
         ).unwrap();
     info!("✅ Created context");
+
+
 
     let gl_ins = gl::GLIns{
         display:display,
