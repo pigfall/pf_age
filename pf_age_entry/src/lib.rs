@@ -200,7 +200,6 @@ fn game_app_update(game_ev_reader: &mut shrev::ReaderId<Event>){
             };
         };
     };
-
 }
 
 
