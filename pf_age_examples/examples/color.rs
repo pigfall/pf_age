@@ -15,7 +15,7 @@ pub fn game_app_update(game_ev_reader: &mut pf_age_entry::ReaderId<pf_age_event:
     if let Some(gl_fcs) = gl_wrapper.gl_fcs.as_ref(){
         if let Some(surface) = gl_wrapper.surface{
             unsafe{
-                gl_fcs.clear_color(0.1,0.2,0.3,1.0);
+                gl_fcs.clear_color(1.0,0.2,0.3,1.0);
                 gl_fcs.clear(glow::COLOR_BUFFER_BIT);
                 gl_wrapper.egl_ins.swap_buffers(gl_wrapper.display,surface);
             };

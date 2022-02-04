@@ -15,11 +15,15 @@ pub use pf_age_entry_macro::*;
 
 pub use android_logger;
 pub use log;
+pub use glow;
 
 mod gl;
+pub mod prelude;
 
-mod activity_state;
+pub mod activity_state;
 use activity_state::ActivityState;
+
+pub use shrev::ReaderId;
 
 mod render;
 
@@ -39,6 +43,7 @@ pub unsafe fn onCreateANativeActivity(
     activity_raw_pointer: *mut ANativeActivity,
     saved_state: *mut c_void,
     saved_state_size: usize,
+    game_update: fn(game_ev_reader: &mut ReaderId<Event>),
     ){
 
     let mut logpipe: [RawFd; 2] = Default::default();
@@ -90,7 +95,8 @@ pub unsafe fn onCreateANativeActivity(
     thread::spawn(move||{
         loop{
             pre_handle_evs();
-            game_app_update(&mut game_ev_reader_id);
+            //game_app_update(&mut game_ev_reader_id);
+            game_update(&mut game_ev_reader_id);
         }
     });
 

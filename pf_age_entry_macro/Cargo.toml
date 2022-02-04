@@ -11,3 +11,4 @@ proc-macro=true
 [dependencies]
 android_logger = "0.10.1"
 quote="1.0.8"
+syn = { version = "1.0.60", features = ["full"] }
