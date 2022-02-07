@@ -21,6 +21,7 @@ pub struct ActivityState{
     pub game_event_channel: EventChannel<Event>,
     pub gl_fc_loaded: bool,
     pub gl: Option<gl::GLIns>,
+    //pub input_event_queue:VecDeque<Event>
 }
 
 

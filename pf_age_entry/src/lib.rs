@@ -200,7 +200,6 @@ fn pre_handle_evs(){
     //let input_evs = poll_input_evs();
 
     if !activity_state.input_queue.is_null(){
-
         loop{
             let mut out_event = std::ptr::null_mut();
             unsafe{
