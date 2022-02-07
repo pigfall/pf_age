@@ -1,4 +1,4 @@
-use pf_ndk_raw::{ANativeActivity, ANativeWindow,AInputQueue};
+use pf_ndk_raw::{ANativeActivity, ANativeWindow,AInputQueue,ALooper_prepare,ALOOPER_PREPARE_ALLOW_NON_CALLBACKS,AInputQueue_attachLooper,AInputQueue_getEvent,AInputEvent,AInputQueue_detachLooper,AInputQueue_finishEvent};
 use std::ffi::{CStr, CString};
 use glow::HasContext;
 use std::os::raw::{c_void,c_int};
@@ -77,7 +77,7 @@ pub unsafe fn onCreateANativeActivity(
     callbacks.onNativeWindowDestroyed = Some(on_native_window_destroyed);
     callbacks.onWindowFocusChanged =Some(on_native_window_focus_changed);
     callbacks.onInputQueueCreated = Some(on_input_queue_created);
-    //callbacks.onInputQueueDestroyed = Some(on_input_queue_destroyed);
+    callbacks.onInputQueueDestroyed = Some(on_input_queue_destroyed);
     info!("✅  callback register success");
     // }
     
@@ -93,6 +93,12 @@ pub unsafe fn onCreateANativeActivity(
 
 
     thread::spawn(move||{
+        let native_looper = ALooper_prepare(ALOOPER_PREPARE_ALLOW_NON_CALLBACKS as _ );
+        if native_looper.is_null(){
+            error!("❌ ALooper_prepare failed");
+            panic!("❌ ALooper_prepare failed");
+        }
+        activity_state::get_act_state().native_looper =  native_looper;
         loop{
             pre_handle_evs();
             //game_app_update(&mut game_ev_reader_id);
@@ -149,6 +155,16 @@ unsafe extern "C" fn on_input_queue_created(
     state.update_input_queue(queue);
 }
 
+unsafe extern "C" fn on_input_queue_destroyed(
+    activity: *mut ANativeActivity,
+    queue: *mut AInputQueue,
+) {
+    callback_counter+=1;
+    info!("{:?} on_input_queue_destroyed",callback_counter);
+    let mut state = activity_state::get_act_state();
+    state.input_queue_destroyed();
+}
+
 fn pre_handle_evs(){
     // { summary
     //   1. poll all activity events , and pre handle it then write to Game EventChannel
@@ -182,6 +198,21 @@ fn pre_handle_evs(){
     
     // { 2. poll input events then write to GameEventChannel
     //let input_evs = poll_input_evs();
+
+    if !activity_state.input_queue.is_null(){
+
+        loop{
+            let mut out_event = std::ptr::null_mut();
+            unsafe{
+                if AInputQueue_getEvent(activity_state.input_queue,&mut out_event)<0{
+                    break;
+                }else{
+                    info!("get input event {:?}",out_event);
+                    AInputQueue_finishEvent(activity_state.input_queue,out_event,1);
+                };
+            };
+        };
+    };
     //write_to_event_channel(native_activity_evs,input_evs);
     // }
 }
@@ -287,7 +318,6 @@ fn pre_handle_native_activity_ev(ev :&Event){
 
                     }
                     // }
-
                 },
                 SystemEvent::AndroidNativeWindowDestoryed=>{
                     let act_state = activity_state::get_act_state();
@@ -301,12 +331,32 @@ fn pre_handle_native_activity_ev(ev :&Event){
                         _=>{},
                     }
                 }
+                SystemEvent::AndroidNativeInputQueueCreated=>{
+                    let act_state = activity_state::get_act_state();
+                    let input_queue =act_state.input_queue; 
+                    info!("⌛  Doing AInputQueue_attachLooper");
+                    unsafe{
+                        AInputQueue_attachLooper(input_queue,act_state.native_looper, NDK_GLUE_LOOPER_INPUT_QUEUE_IDENT,None,std::ptr::null_mut());
+                    };
+                    info!("✅  AInputQueue_attachLooper Done");
+                }
+                SystemEvent::AndroidNativeInputQueueDestroyed=>{
+                    let act_state = activity_state::get_act_state();
+                    let input_queue =act_state.input_queue; 
+                    info!("⌛  Doing AInputQueue_detachLooper");
+                    unsafe{
+                        AInputQueue_detachLooper(input_queue);
+                    };
+                    info!("✅  AInputQueue_detachLooper Done");
+                }
                 _=>{},
             }
         }
         _ =>{},
     }
 }
+
+pub const NDK_GLUE_LOOPER_INPUT_QUEUE_IDENT: i32 = 1;
 
 
 fn init_egl(){

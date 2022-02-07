@@ -13,4 +13,6 @@ pub struct InputEvent{
 pub enum SystemEvent{
     AndroidNativeWindowCreated,
     AndroidNativeWindowDestoryed,
+    AndroidNativeInputQueueCreated,
+    AndroidNativeInputQueueDestroyed,
 }
