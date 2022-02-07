@@ -4,4 +4,6 @@ members= [
 "pf_age_examples",
 "pf_age_entry_macro",
 "pf_age_event",
+"pf_age_engine",
+"pf_age_ecs",
 ]

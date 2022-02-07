@@ -7,7 +7,12 @@ edition = "2021"
 
 [dependencies]
 pf_age_entry={path="../pf_age_entry"}
+pf_age_event= {path="../pf_age_event"}
 
 [[example]]
 name="hello"
+crate-type=["cdylib"]
+
+[[example]]
+name="color"
 crate-type=["cdylib"]

@@ -1,1 +1,2 @@
-pub use ndk_sys::{ANativeActivity,ANativeWindow,AInputQueue};
+pub use ndk_sys::{ANativeActivity,ANativeWindow,AInputQueue,ALooper,ALooper_prepare,ALOOPER_PREPARE_ALLOW_NON_CALLBACKS,AInputQueue_attachLooper,AInputQueue_getEvent,AInputEvent,AInputQueue_detachLooper,AInputQueue_finishEvent};
+

@@ -1,14 +1,9 @@
 [package]
-name = "pf_age_entry_macro"
+name = "pf_age_ecs"
 version = "0.1.0"
 edition = "2021"
 
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
-[lib]
-proc-macro=true
-
 [dependencies]
-android_logger = "0.10.1"
-quote="1.0.8"
-syn = { version = "1.0.60", features = ["full"] }
+specs = "0.17.0"
