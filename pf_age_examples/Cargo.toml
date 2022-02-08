@@ -16,3 +16,7 @@ crate-type=["cdylib"]
 [[example]]
 name="color"
 crate-type=["cdylib"]
+
+[[example]]
+name="traingle"
+crate-type=["cdylib"]
