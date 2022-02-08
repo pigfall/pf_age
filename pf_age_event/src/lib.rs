@@ -7,7 +7,7 @@ pub enum Event{
 
 #[derive(Debug)]
 pub struct InputEventWrapper{
-    ev :InputEvent,
+    pub ev :InputEvent,
 }
 
 unsafe impl Send for InputEventWrapper{}
