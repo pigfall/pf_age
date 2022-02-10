@@ -20,6 +20,7 @@ pub struct ActivityState{
     pub activity_evs:VecDeque<Event>,
     pub game_event_channel: EventChannel<Event>,
     pub gl_fc_loaded: bool,
+    pub egl_inited:bool,
     pub gl: Option<gl::GLIns>,
     //pub input_event_queue:VecDeque<Event>
 }
@@ -97,6 +98,7 @@ impl Default for ActivityState{
             activity_evs:VecDeque::with_capacity(200),
             game_event_channel: EventChannel::new(),
             gl_fc_loaded:false,
+            egl_inited:false,
             gl:None,
         }
     }

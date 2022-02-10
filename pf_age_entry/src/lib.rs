@@ -11,6 +11,8 @@ use std::ptr::NonNull;
 use pf_age_event::{Event,SystemEvent};
 use std::thread;
 
+mod support;
+
 pub use pf_age_entry_macro::*;
 
 pub use android_logger;
@@ -88,8 +90,8 @@ pub unsafe fn onCreateANativeActivity(
     activity_state::activity_state = Some(state);
 
 
-    init_egl();
-    info!("✅  egl inited");
+    //init_egl();
+    //info!("✅  egl inited");
 
 
     thread::spawn(move||{
@@ -246,6 +248,11 @@ fn pre_handle_native_activity_ev(ev :&Event){
                 SystemEvent::AndroidNativeWindowCreated=>{
                     let act_state = activity_state::get_act_state();
                     let window_ptr = act_state.native_window;
+                    if !act_state.egl_inited{
+                        info!("⌛ initing egl");
+                        init_egl();
+                        act_state.egl_inited = true;
+                    }
                     let mut gl_wrapper = &mut act_state.gl.as_mut().unwrap();
                     // { create render context
                     // }
@@ -279,8 +286,35 @@ fn pre_handle_native_activity_ev(ev :&Event){
                             ).unwrap();
                     info!("✅ Attached an EGL rendering context to EGL surfaces");
                     if !act_state.gl_fc_loaded{
+                        support::load(
+                             |name|{
+                                    info!("⌛ Loading {:?}",name);
+                                    gl_wrapper.egl_ins.get_proc_address(name).
+                                        map_or(std::ptr::null(),|ptr|{
+                                            info!("✅  Loaded {:?} {:?}",name,ptr);
+                                            ptr as *const _
+                                        })
+
+                                }   
+                            );
+                        //panic!("dedbug");
+                        
                         info!("⌛  Loading gl functions");
                         let gl_fcs = unsafe {
+                            //glow::Context::from_loader_function(
+                            //    |name|{
+                            //        info!("⌛ Loading {:?}",name);
+                            //        gl_wrapper.egl_ins.get_proc_address(name).
+                            //            map_or(std::ptr::null(),|ptr|{
+                            //                info!("✅  Loaded {:?} {:?}",name,ptr);
+                            //                ptr as *const _
+                            //            })
+
+                            //    }
+                            //        
+                            //    )
+
+
                             glow::Context::from_loader_function_with_version_parse(
                                 |version_str|{
                                     // TODO
@@ -387,9 +421,15 @@ fn init_egl(){
     info!("✅ Config choosed");
     // >>
 
+    let context_attributes = [
+		egl::CONTEXT_MAJOR_VERSION, 2,
+		egl::CONTEXT_MINOR_VERSION, 0,
+        egl::NONE,
+	];
+
     // << create_context
     info!("⌛ Creating context");
-    let ctx = egl_ins.create_context(display,config,None,None).map_err(
+    let ctx = egl_ins.create_context(display,config,None,Some(&context_attributes)).map_err(
         |e|{
             info!("❌ Failed to create context {:?}",e);
             e
