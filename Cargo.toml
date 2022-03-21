@@ -6,4 +6,5 @@ members= [
 "pf_age_event",
 "pf_age_engine",
 "pf_age_ecs",
+"pf_age_render",
 ]
