@@ -7,6 +7,9 @@ pub fn game_main_wrapper(attr: proc_macro::TokenStream,input: proc_macro::TokenS
     let main_fn_name = &item_ast.sig.ident;
 
     let output_tks = quote!{
+        #[cfg(not(target_os="android"))]
+        compile_error!("only supported android");
+
         use std::os::raw::c_void;
         pub use pf_age_entry;
         pub use pf_age_entry::log::info;
